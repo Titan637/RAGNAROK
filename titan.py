@@ -64,7 +64,7 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Check if bot uptime exceeds 15 minutes
     uptime = time.time() - bot_start_time
-    if uptime > 900:  # 15 minutes in seconds
+    if uptime > 1020:  # 15 minutes in seconds
         await update.message.reply_text("⏳ Wait for 5 minutes. The bot is going to restart.")
         return
 
