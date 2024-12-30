@@ -1,9 +1,12 @@
 name: Trigger Workflow Every 10 Minutes
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:  # Manual trigger to start the loop
+  push:  # Automatically triggers when the previous workflow commits
+    branches:
+      - main
   schedule:
-    - cron: '*/10 * * * *'  # Every 10 minutes
+    - cron: '*/13 * * * *'  # Run every 10 minutes
 
 permissions:
   contents: write  # Allow GitHub Actions to push changes
@@ -13,18 +16,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Append "Hello World" and commit
+      # Add Hello World to hello.txt and commit changes
+      - name: Add Hello World to hello.txt
         run: |
           echo "[$(date)] Hello World" >> hello.txt  # Add a timestamp for clarity
-          if git status --porcelain | grep hello.txt; then
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add hello.txt
+          git commit -m "Add Hello World"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Titan637/RAGNAROK.git
+
+      # Keep adding Hello World every 10 minutes
+      - name: Repeat every 10 minutes
+        run: |
+          for i in {1..6}; do  # Set how many times you want it to run (6 times for 1 hour)
+            echo "[$(date)] Hello World" >> hello.txt
             git add hello.txt
-            git commit -m "Update hello.txt with new entry"
+            git commit -m "Add Hello World"
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Titan637/RAGNAROK.git
-          else
-            echo "No changes detected. Skipping commit."
-          fi
+            sleep 600  # Sleep for 10 minutes (600 seconds)
+          done
