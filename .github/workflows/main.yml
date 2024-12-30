@@ -1,0 +1,31 @@
+name: Trigger Workflow Every 10 Minutes
+
+on:
+  workflow_dispatch:  # Manual trigger to start the workflow
+  schedule:
+    - cron: '*/13 * * * *'  # Run every 10 minutes
+
+permissions:
+  contents: write  # Allow GitHub Actions to push changes
+
+jobs:
+  trigger_next_run:
+    runs-on: ubuntu-latest  # Changed to Ubuntu for broader compatibility
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Append "Hello World" to hello.txt and commit changes
+      - name: Append "Hello World" and commit
+        run: |
+          echo "[$(date)] Hello World" >> hello.txt  # Add a timestamp for clarity
+          if git status --porcelain | grep hello.txt; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add hello.txt
+            git commit -m "Update hello.txt with new entry"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Titan637/RAGNAROK.git
+          else
+            echo "No changes detected. Skipping commit."
