@@ -5,7 +5,7 @@ on:
     - cron: '0 */4 * * *'  # Every 4 hours
 
 permissions:
-  contents: write
+  contents: write  # Necessary for triggering workflows
 
 jobs:
   trigger_workflow:
@@ -17,15 +17,9 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const fetch = require('node-fetch');
-            const response = await fetch('https://api.github.com/repos/Titan637/RAGNAROK/actions/workflows/continuous-increment.yml/dispatches', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github.everest-preview+json',
-              },
-              body: JSON.stringify({
-                ref: 'main'
-              }),
+            await github.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'continuous-increment.yml',  // Name of the target workflow file
+              ref: 'main',  // The branch to trigger the workflow on
             });
-            console.log(`Triggered workflow with response: ${response.status}`);
